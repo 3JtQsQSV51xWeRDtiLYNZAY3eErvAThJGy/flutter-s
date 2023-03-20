@@ -1,115 +1,130 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:sgan/scriss/display.dart';
+import 'package:qrscan/qrscan.dart' as scanner;
+import 'package:sgan/scriss/display01.dart';
+import 'package:sgan/scriss/screen1.dart';
+// ignore: unused_import
+import 'model/student.dart';
+import 'scriss/formscreen.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  // สร้าง Firebase app ก่อนที่จะเรียกใช้งานคุณสมบัติอื่น ๆ ของ Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+
+  // ทำสิ่งที่คุณต้องการกับ Firebase ต่อไปนี้
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  const MyHomePage({super.key});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
+  String? scannedData;
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(50.100), // กำหนดความสูงของ AppBar
+        child: SafeArea(
+          child: AppBar(
+            backgroundColor:
+                Colors.black.withOpacity(0.6), // กำหนดพื้นหลังเป็นโปร่งใส
+            elevation: 10, // กำหนดความสูงของ AppBar เป็น 0 เพื่อลบเงา
+            shape: RoundedRectangleBorder(
+              // กำหนดรูปร่างของ AppBar เป็นวงกลม
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(30),
+                bottom: Radius.circular(30),
+              ),
+            ),
+            title: Text(
+              "แอป",
+              textAlign: TextAlign.center, // กำหนดให้ข้อความอยู่ตรงกลาง
+            ),
+            centerTitle: true, // เซ็ตค่าให้ title อยู่ตรงกลาง
+          ),
+        ),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: Container(
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+          children: [
+            SizedBox(
+              height: 50, // กำหนดความสูงของ SizedBox เท่ากับความสูงของ AppBar
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            Center(
+              child: Image(
+                width: 300, // กำหนดความกว้างของรูปเป็น 200 pixels
+                height: 300, // กำหนดความสูงของรูปเป็น 200 pixels
+                image: NetworkImage(
+                  'https://media.discordapp.net/attachments/747780435773227069/1080153452522508429/cropped-125833576_100845955197117_7125048327001744835_n-1.png',
+                ),
+              ),
             ),
+            SizedBox(height: 100), // เพิ่มช่องว่างระหว่างรูปกับ Text
+
+            TextButton(
+              onPressed: () async {
+                var cameraStatus = await Permission.camera.status;
+
+                if (cameraStatus.isGranted) {
+                  String? cameraScanResult = await scanner.scan();
+                  setState(() {
+                    scannedData = cameraScanResult;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            Display2(scannedData: scannedData),
+                      ),
+                    );
+                  });
+                } else {
+                  var cameraPermissionResult =
+                      await Permission.camera.request();
+                }
+              },
+              child: Text(
+                "กดสแกนเลย",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 24,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            // ElevatedButton(
+            //   onPressed: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (context) => MyApp01()),
+            //     );
+            //   },
+            //   child: Text('Click me'),
+            // ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
